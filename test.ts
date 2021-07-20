@@ -12,5 +12,10 @@ wb.publish('t:1', { m: 101 })
 wb.publish('t:1', { m: 102 })
 
 await delay(1_000)
-s1.close()
+
+wb.publish('t:1', { m: 103 })
+await delay(1)
+s1.dispose()
+wb.publish('t:1', { m: 104 })
+
 console.log('finished')

@@ -1,5 +1,4 @@
-export type Subscription = { close: () => void }
-export type Callback = (e: MessageEvent) => void
+import { Channel, Subscription, Callback, create } from "./channel.ts"
 
 export default class WhatBus {
     prefix: string
@@ -9,13 +8,14 @@ export default class WhatBus {
     }
 
     channel(name: string) {
-        return new BroadcastChannel(this.prefix + name)
+        return create(this.prefix + name)
     }
 
     publish(name: string, data: any) {
+        // @todo: cache publication channel instances?
         const channel = this.channel(name)
         channel.postMessage(data)
-        queueMicrotask(() => channel.close())
+        channel.dispose()
     }
 
     subscribe(name: string, callback: Callback): Subscription {
@@ -26,7 +26,7 @@ export default class WhatBus {
 
     subscribeOnce(name: string, callback: Callback): Subscription {
         const subscription = this.subscribe(name, (e: MessageEvent) => {
-            subscription.close()
+            subscription.dispose()
             callback(e)
         })
         return subscription

@@ -1,10 +1,7 @@
+import { Disposable } from "./disposer.ts"
 import { Nullable } from "./utils.ts"
 
-export interface Subscription {
-    name: string
-    dispose: () => void
-}
-
+export interface Subscription extends Disposable { name: string }
 export type Callback = (e: MessageEvent) => void
 
 export interface Channel extends Subscription {

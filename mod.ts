@@ -1,6 +1,9 @@
 import { Channel, Subscription, Callback, create } from "./channel.ts"
+import { Disposer } from "./disposer.ts"
 
 export default class WhatBus {
+    closed = false
+    disposer = new Disposer
     prefix: string
 
     constructor(prefix: string = '') {
@@ -8,7 +11,10 @@ export default class WhatBus {
     }
 
     channel(name: string) {
-        return create(this.prefix + name)
+        if (this.closed) throw new Error(`WhatBus(${this.prefix}) is closed`)
+        const channel = create(this.prefix + name)
+        this.disposer.add(channel)
+        return channel
     }
 
     publish(name: string, data: any) {
@@ -30,5 +36,10 @@ export default class WhatBus {
             callback(e)
         })
         return subscription
+    }
+
+    close() {
+        this.closed = true
+        this.disposer.dispose()
     }
 }

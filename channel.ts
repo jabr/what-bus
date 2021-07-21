@@ -1,5 +1,5 @@
 import { Disposable } from "./disposer.ts"
-import { Nullable } from "./utils.ts"
+import { Nullable, Optional } from "./utils.ts"
 
 export interface Subscription extends Disposable { name: string }
 export type Callback = (e: MessageEvent) => void
@@ -18,4 +18,60 @@ class WrappedBC extends BroadcastChannel implements Channel {
 
 export function create(name: string): Channel {
     return new WrappedBC(name) as Channel
+}
+
+export class Cache {
+    channels: Map<string, Channel> = new Map
+    maxSize: number
+
+    constructor(maxSize: number = 100) {
+        this.maxSize = maxSize
+    }
+
+    get(name: string): Optional<Channel> {
+        const channel = this.channels.get(name)
+        if (channel) {
+            // delete and set entry again to update the order used
+            this.channels.delete(name)
+            this.channels.set(name, channel)
+        }
+        return channel
+    }
+
+    private trim() {
+        let overage = this.channels.size - this.maxSize
+        let entries = this.channels.entries()
+        while (overage > 0) {
+            const { value, done } = entries.next()
+            if (done) break
+            const [ name, channel ] = value
+            this.channels.delete(name)
+            channel.dispose()
+            overage--
+        }
+    }
+
+    set(name: string, channel: Channel): this {
+        // if we already have an entry for this name...
+        const existing = this.channels.get(name)
+        if (existing) {
+            // remove it and dispose the channel
+            this.channels.delete(name)
+            existing.dispose()
+        }
+
+        this.channels.set(name, channel)
+
+        // trim old entries if we're over the max size now
+        if (this.channels.size > this.maxSize) {
+            queueMicrotask(() => this.trim())
+        }
+
+        return this
+    }
+
+    dispose() {
+        for (const channel of this.channels.values()) channel.dispose()
+        this.channels.clear()
+    }
 }

@@ -1,8 +1,10 @@
-import { Channel, Subscription, Callback, create } from "./channel.ts"
+import { Channel, Subscription, Callback, Cache, create } from "./channel.ts"
 import { Disposer } from "./disposer.ts"
+import { Optional } from "./utils.ts"
 
 export default class WhatBus {
     closed = false
+    cache = new Cache
     disposer = new Disposer
     prefix: string
 
@@ -18,10 +20,15 @@ export default class WhatBus {
     }
 
     publish(name: string, data: any) {
-        // @todo: cache publication channel instances?
-        const channel = this.channel(name)
+        // check cache for corresponding channel
+        let channel: Optional<Channel> = this.cache.get(name)
+        if (!channel) {
+            // create new channel and add to cache
+            channel = this.channel(name)
+            this.cache.set(name, channel)
+        }
         channel.postMessage(data)
-        channel.dispose()
+        // channel will be closed when it falls out of the cache
     }
 
     subscribe(name: string, callback: Callback): Subscription {
@@ -40,6 +47,7 @@ export default class WhatBus {
 
     close() {
         this.closed = true
+        this.cache.dispose()
         this.disposer.dispose()
     }
 }

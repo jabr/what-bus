@@ -1,7 +1,8 @@
 scripts:
     dev:
+        cmd: tests/channel.test.ts
+        # cmd: tests/cluster.test.ts
         # cmd: tests/core.test.ts
-        cmd: tests/cluster.test.ts
         # cmd: tests/nodes.test.ts
         watch: true
         unstable: true

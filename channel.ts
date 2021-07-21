@@ -38,19 +38,6 @@ export class Cache {
         return channel
     }
 
-    private trim() {
-        let overage = this.channels.size - this.maxSize
-        let entries = this.channels.entries()
-        while (overage > 0) {
-            const { value, done } = entries.next()
-            if (done) break
-            const [ name, channel ] = value
-            this.channels.delete(name)
-            channel.dispose()
-            overage--
-        }
-    }
-
     set(name: string, channel: Channel): this {
         // if we already have an entry for this name...
         const existing = this.channels.get(name)
@@ -62,9 +49,9 @@ export class Cache {
 
         this.channels.set(name, channel)
 
-        // trim old entries if we're over the max size now
         if (this.channels.size > this.maxSize) {
-            queueMicrotask(() => this.trim())
+            // schedule task to trim old entries
+            setTimeout(() => this.trim(), 0)
         }
 
         return this
@@ -73,5 +60,17 @@ export class Cache {
     dispose() {
         for (const channel of this.channels.values()) channel.dispose()
         this.channels.clear()
+    }
+
+    // delete/dispose old entries if we're over the max size
+    private trim() {
+        let overage = this.channels.size - this.maxSize
+        if (overage <= 0) return
+
+        for (const [ name, channel ] of this.channels.entries()) {
+            this.channels.delete(name)
+            channel.dispose()
+            if (--overage <= 0) break
+        }
     }
 }

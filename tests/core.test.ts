@@ -1,6 +1,6 @@
 import { delay } from "./deps.ts"
 
-import WhatBus from "../mod.ts"
+import WhatBus from "../core.ts"
 
 let wb = new WhatBus('wb:')
 wb.publish('t:1', { m: 100 })

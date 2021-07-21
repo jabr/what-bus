@@ -1,4 +1,4 @@
-import WhatBus from "./mod.ts"
+import WhatBus from "./core.ts"
 import { Channel, Subscription, Callback } from "./channel.ts"
 import { XXH64 } from "./deps.ts"
 

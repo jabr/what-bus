@@ -1,30 +1,39 @@
 import { delay, spec, asserts } from "./deps.ts"
-const { describe, it } = spec
-const { assert } = asserts
+import { createFakeChannel } from "./utils.ts"
 
 import { Channel, Cache } from "../channel.ts"
 
-const fakeChannel = (name: string): Channel => {
-    return {
-        name, disposed: false,
-        dispose() {
-            console.log(`dispose: ${this.name}`)
-            this.disposed = true
-        }
-    } as any as Channel
-}
-
 const cc = new Cache(2)
-cc.set('a', fakeChannel('a.0'))
-cc.set('b', fakeChannel('b.0'))
+cc.set('a', createFakeChannel('a.0'))
+cc.set('b', createFakeChannel('b.0'))
 console.log(cc)
 
-cc.set('a', fakeChannel('a.1'))
+cc.set('a', createFakeChannel('a.1'))
 console.log(cc)
 
-cc.set('c', fakeChannel('c.0'))
+cc.set('c', createFakeChannel('c.0'))
 await delay(1) // wait for trim to run...
 console.log(cc)
 
 await delay(1_000)
 console.log('finished')
+
+const { describe, it } = spec
+const { assertEquals } = asserts
+
+describe('Channel', () => {
+    describe('interface', () => {})
+    describe('Cache', () => {
+        describe('constructor', () => {
+            it('has a default maxSize', ctx => {
+                const c = new Cache()
+                asserts.assert(c.maxSize > 0)
+            })
+
+            it('accepts an alternate maxSize', ctx => {
+                const c = new Cache(2)
+                assertEquals(c.maxSize, 2)
+            })
+        })
+    })
+})

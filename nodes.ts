@@ -42,6 +42,7 @@ type Bus = {
     hasher: XXH64.Hasher
     channel: (name: string) => Channel
 }
+type HashedNode = [ Optional<Node>, bigint ]
 
 export default class Nodes {
     bus: Bus
@@ -56,9 +57,28 @@ export default class Nodes {
         // @todo: remove nodes that haven't been seen recently
     }
 
-    forKey(key: string): Node {
-        // @todo: rendezvous hash
-        return this.nodes.entries().next().value
+    nodeFor(uuid: string): Node {
+        let node: Optional<Node> = this.nodes.get(uuid)
+        if (!node) {
+            node = new OtherNode(uuid)
+            this.nodes.set(uuid, node)
+        }
+        return node
+    }
+
+    channelFor(uuid: string): Channel {
+        let node = this.nodeFor(uuid)
+        return (node.channel ??= this.bus.channel(node.uuid))
+    }
+
+    rendezvousForKey(key: string, under: bigint = 1n << 64n): HashedNode {
+        const reducer = (max: HashedNode, node: Node): HashedNode => {
+            const hash = this.bus.hasher.reset()
+                .update(node.uuid).update(key)
+                .digest('bigint') as bigint
+            return (hash < under && hash > max[1]) ? [ node, hash ] : max
+        }
+        return [...this.nodes.values()].reduce(reducer, [ undefined, -1n ])
     }
 
     async leader() {

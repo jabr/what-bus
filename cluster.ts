@@ -1,53 +1,25 @@
+import WhatBus from "./mod.ts"
+import { Channel, Subscription, Callback } from "./channel.ts"
 import { XXH64 } from "./deps.ts"
 
-let prefix = 'ebb'
-console.log(await XXH64.create(new TextEncoder().encode(prefix)))
+const DEFAULT_HEARTBEAT_INTERVAL = 1000
 
-const HEARTBEAT_INTERVAL = 1000
-
-type Optional<V> = V | undefined
-type Subscription = { close: () => void }
-type Callback = (e: MessageEvent) => void
-
-class Node {
-    uuid: string
-    channel: Optional<BroadcastChannel>
-    lastSeen: number = 0
-    leader: boolean = false
-
-    constructor(uuid: string) {
-        this.uuid = uuid
-    }
-
-    seen() {
-        this.lastSeen = Date.now()
-    }
+export async function create(prefix: string = 'wb:') {
+    const hasher = await XXH64.create(new TextEncoder().encode(prefix))
+    return new Cluster(prefix, hasher)
 }
 
-class Nodes extends Map<string, Node> {
-    expire() {
-        // @todo: remove nodes that haven't been seen recently
-    }
-
-    forKey(key: string) {
-        // @todo: rendezvous hash
-    }
-
-    async leader() {
-        // @todo
-    }
-}
-
-export default class WhatBus {
-    prefix: string
+class Cluster extends WhatBus {
     uuid: string
-    broadcast: BroadcastChannel
-    direct: BroadcastChannel
+    broadcast: Channel
+    direct: Channel
     interval: number
+    hasher: XXH64.Hasher
 
-    constructor(prefix: string = 'eb') {
-        this.prefix = prefix
+    constructor(prefix: string, hasher: XXH64.Hasher) {
+        super(prefix)
         this.uuid = crypto.randomUUID()
+        this.hasher = hasher
 
         this.broadcast = this.channel('i')
         this.broadcast.onmessage = this.onBroadcast.bind(this)
@@ -56,27 +28,26 @@ export default class WhatBus {
         this.direct.onmessage = (e) => this.onDirect.bind(this)
 
         this.interval = setInterval(
-            this.heartbeat.bind(this),
-            HEARTBEAT_INTERVAL
+            this.onHeartbeat.bind(this),
+            DEFAULT_HEARTBEAT_INTERVAL
         )
+
+        // @todo: broadcast announcement?
     }
 
     close() {
         clearInterval(this.interval)
-        this.direct.close()
-        this.broadcast.close()
+        this.direct.dispose()
+        this.broadcast.dispose()
+        super.close()
     }
 
     publish(topic: string, data: any) {
-        const channel = this.channel(`t:${topic}`)
-        channel.postMessage(data)
-        channel.close()
+        super.publish(`t:${topic}`, data)
     }
 
     subscribe(topic: string, callback: Callback): Subscription {
-        const channel = this.channel(`t:${topic}`)
-        channel.onmessage = callback
-        return channel as Subscription
+        return super.subscribe(`t:${topic}`, callback)
     }
 
     private post(data: any, direct?: string) {
@@ -87,9 +58,7 @@ export default class WhatBus {
         } else {
             // post to the direct channel
             // @todo: cache direct channels?
-            const channel = this.channel(`i:${direct}`)
-            channel.postMessage(data)
-            channel.close()
+            super.publish(`i:${direct}`, data)
         }
     }
 
@@ -99,11 +68,6 @@ export default class WhatBus {
     private onDirect(event: MessageEvent) {
     }
 
-    private heartbeat() {
+    private onHeartbeat() {
     }
-
-    private channel(name: string) {
-        return new BroadcastChannel(`${this.prefix}:${name}`)
-    }
-
 }

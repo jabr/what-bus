@@ -1,6 +1,6 @@
-import { delay } from "https://deno.land/std/async/mod.ts"
+import { delay } from "./deps.ts"
 
-import WhatBus from "./mod.ts"
+import WhatBus from "../mod.ts"
 
 let wb = new WhatBus('wb:')
 wb.publish('t:1', { m: 100 })

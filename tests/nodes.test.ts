@@ -1,8 +1,8 @@
-import { delay } from "https://deno.land/std/async/mod.ts"
+import { delay } from "./deps.ts"
 
-import { XXH64 } from "./deps.ts"
-import { Channel } from "./channel.ts"
-import Nodes from "./nodes.ts"
+import { XXH64 } from "../deps.ts"
+import { Channel } from "../channel.ts"
+import Nodes from "../nodes.ts"
 
 const bus = {
     uuid: '6b6a1935-2d10-4b06-a82f-419aa480c8c0',

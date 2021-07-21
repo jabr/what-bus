@@ -1,6 +1,6 @@
-import { delay } from "https://deno.land/std/async/mod.ts"
+import { delay } from "./deps.ts"
 
-import { create } from "./cluster.ts"
+import { create } from "../cluster.ts"
 
 const wb = await create('twb:')
 

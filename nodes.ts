@@ -2,39 +2,25 @@ import { Channel } from "./channel.ts"
 import { Optional } from "./utils.ts"
 import { XXH64 } from "./deps.ts"
 
-interface Node {
-    readonly uuid: string
-    readonly isSelf: boolean
+abstract class Node {
     channel: Optional<Channel>
-    seen: () => void
+    constructor(readonly uuid: string) {}
+    abstract get isSelf(): boolean
+    abstract seen(): void
+    abstract age(now: number): number
 }
 
-class SelfNode implements Node {
-    readonly uuid: string
-    channel: Optional<Channel>
-
-    constructor(uuid: string) {
-        this.uuid = uuid
-    }
-
+class SelfNode extends Node {
     get isSelf() { return true }
     seen() {}
+    age(now: number) { return 0 }
 }
 
-class OtherNode implements Node {
-    readonly uuid: string
-    channel: Optional<Channel>
+class OtherNode extends Node {
     private lastSeen: number = 0
-
-    constructor(uuid: string) {
-        this.uuid = uuid
-    }
-
     get isSelf() { return false }
-
-    seen() {
-        this.lastSeen = performance.now()
-    }
+    seen() { this.lastSeen = performance.now() }
+    age(now: number) { return now - this.lastSeen }
 }
 
 type Bus = {
@@ -53,8 +39,11 @@ export default class Nodes {
         this.nodes.set(bus.uuid, new SelfNode(bus.uuid))
     }
 
-    expire() {
-        // @todo: remove nodes that haven't been seen recently
+    close() {
+        for (const node of this.nodes.values()) {
+            if (node.channel) node.channel.dispose()
+        }
+        this.nodes.clear()
     }
 
     nodeFor(uuid: string): Node {
@@ -66,9 +55,13 @@ export default class Nodes {
         return node
     }
 
+    nodeSeen(uuid: string): void {
+        this.nodeFor(uuid).seen()
+    }
+
     channelFor(uuid: string): Channel {
         let node = this.nodeFor(uuid)
-        return (node.channel ??= this.bus.channel(node.uuid))
+        return (node.channel ??= this.bus.channel(`i:${node.uuid}`))
     }
 
     rendezvousForKey(key: string, under: bigint = 1n << 64n): HashedNode {
@@ -79,6 +72,23 @@ export default class Nodes {
             return (hash < under && hash > max[1]) ? [ node, hash ] : max
         }
         return [...this.nodes.values()].reduce(reducer, [ undefined, -1n ])
+    }
+
+    // yield nodes with an age over the given threshold
+    *stale(threshold: number) {
+        const now = performance.now()
+        for (const node of this.nodes.values()) {
+            const age = node.age(now)
+            if (age > threshold) yield node
+        }
+    }
+
+    // remove nodes that haven't been seen recently
+    expire() {
+        for (const node of this.stale(5_000)) {
+            // @todo: remove
+            console.log('remove expired node', node.uuid)
+        }
     }
 
     async leader() {

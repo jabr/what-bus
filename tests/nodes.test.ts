@@ -54,5 +54,13 @@ hash = rendezvousUnder('xxx', hash)
 hash = rendezvousUnder('xxx', hash)
 hash = rendezvousUnder('xxx', hash) // no more nodes
 
+ns.expire()
+await delay(100)
+ns.expire()
+
+ns.close()
+console.log(ns.nodes)
+console.log(createFakeChannel.channels)
+
 await delay(1_000)
 console.log('finished')

@@ -102,6 +102,8 @@ class Cluster extends WhatBus {
 
     private onHeartbeat() {
         // console.log('heartbeat', this.uuid)
+        // @todo: something more efficient for keeping track of active nodes. swim/gossip?
+        this.nodes.expire(5_000)
         for (const node of this.nodes.stale(2_000)) {
             console.log('stale node', node.uuid)
             this.post({ev: 'ping'}, node.uuid)

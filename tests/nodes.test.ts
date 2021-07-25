@@ -53,9 +53,12 @@ hash = rendezvousUnder('xxx', hash)
 hash = rendezvousUnder('xxx', hash)
 hash = rendezvousUnder('xxx', hash) // no more nodes
 
-ns.expire()
-await delay(100)
-ns.expire()
+console.log('expire...')
+ns.expire(1_000)
+console.log('wait...')
+await delay(1_000)
+console.log('expire again...')
+ns.expire(1_000)
 
 ns.close()
 console.log(ns.nodes)

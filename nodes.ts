@@ -84,10 +84,11 @@ export default class Nodes {
     }
 
     // remove nodes that haven't been seen recently
-    expire() {
-        for (const node of this.stale(5_000)) {
-            // @todo: remove
+    expire(threshold: number) {
+        for (const node of this.stale(threshold)) {
             console.log('remove expired node', node.uuid)
+            if (node.channel) node.channel.dispose()
+            this.nodes.delete(node.uuid)
         }
     }
 

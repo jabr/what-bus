@@ -2,7 +2,7 @@ import { delay } from "./deps.ts"
 
 import WhatBus from "../core.ts"
 
-let wb = new WhatBus('wb:')
+const wb = new WhatBus('wb:')
 wb.publish('t:1', { m: 100 })
 
 let s1 = wb.subscribe('t:1', event => console.log('s1', event.data))

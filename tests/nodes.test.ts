@@ -2,7 +2,6 @@ import { delay } from "./deps.ts"
 import { createFakeChannel } from "./utils.ts"
 
 import { XXH64 } from "../deps.ts"
-import { Channel } from "../channel.ts"
 import Nodes from "../nodes.ts"
 
 const bus = {
@@ -24,7 +23,7 @@ const uuids = [
     '5d9ef3a7-3ffc-436a-bb5f-aa7915d1ba20',
 ]
 
-let on1 = ns.nodeFor(uuids[0])
+const on1 = ns.nodeFor(uuids[0])
 console.log(on1, on1.isSelf)
 
 console.log(ns.channelFor(uuids[0]))

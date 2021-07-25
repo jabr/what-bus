@@ -1,8 +1,8 @@
 import { Channel } from "../channel.ts"
 
-let fakeChannels: Channel[] = []
+const fakeChannels: Channel[] = []
 export function createFakeChannel(name: string): Channel {
-    let channel = {
+    const channel = {
         name, id: fakeChannels.length, disposed: false,
         dispose() {
             console.log(`dispose: ${this.name}`)

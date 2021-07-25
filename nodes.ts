@@ -17,7 +17,7 @@ class SelfNode extends Node {
 }
 
 class OtherNode extends Node {
-    private lastSeen: number = 0
+    private lastSeen = 0
     get isSelf() { return false }
     seen() { this.lastSeen = performance.now() }
     age(now: number) { return now - this.lastSeen }
@@ -60,7 +60,7 @@ export default class Nodes {
     }
 
     channelFor(uuid: string): Channel {
-        let node = this.nodeFor(uuid)
+        const node = this.nodeFor(uuid)
         return (node.channel ??= this.bus.channel(`i:${node.uuid}`))
     }
 

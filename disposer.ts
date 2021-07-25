@@ -21,7 +21,7 @@ export class Disposer {
 
     dispose() {
         for (const weakRef of this.disposables) {
-            let disposable = weakRef.deref()
+            const disposable = weakRef.deref()
             if (disposable) disposable.dispose()
         }
         this.disposables.clear()

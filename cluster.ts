@@ -6,7 +6,7 @@ import { XXH64 } from "./deps.ts"
 const DEFAULT_HEARTBEAT_INTERVAL = 1000
 let sequenceCounter = 0
 
-export async function create(prefix: string = 'wb:') {
+export async function create(prefix = 'wb:') {
     const hasher = await XXH64.create(new TextEncoder().encode(prefix))
     return new Cluster(prefix, hasher)
 }

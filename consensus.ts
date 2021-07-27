@@ -20,7 +20,7 @@ export default class Consensus {
     state = State.Follower
     term = 0
     votedFor: Optional<NodeId>
-    votesReceived = 0
+    votesReceived: Set<NodeId> = new Set
     lastTouch = 0
     heartbeatInterval: Optional<number>
     touchExpiration: number = 0
@@ -64,61 +64,39 @@ export default class Consensus {
 
     recv(m: Message) {
         if (this.state === State.Dead) return
+        if (m.term > this.term) this.becomeFollower(m.term)
+        if (m.term < this.term) {
+            // The message term is out of date,
+            // so notify sender and otherwise ignore.
+            this.send(m.from, 'nop')
+            return
+        }
 
         switch (m.type) {
             case 'leader':
             case 'update': 
                 {
-                    if (m.term > this.term) this.becomeFollower(m.term)
-                    if (m.term === this.term) {
-                        if (this.state !== State.Follower) this.becomeFollower(m.term)
-                        this.touch()
-                    }
-            
-                    this.send(m.from, 'ack') // @todo: only reply if m.term is old?
-                }
-                break
-            case 'ack':
-                {
-                    if (m.term > this.term) this.becomeFollower(m.term)
+                    if (this.state !== State.Follower) this.becomeFollower(m.term)
+                    else this.touch()
                 }
                 break
             case 'candidate':
                 {
                     console.log(`[${this.id}] receives candidate from ${m.from}, for term ${m.term}`)
-                    if (m.term > this.term) this.becomeFollower(m.term)
-                    if (m.term === this.term && (
-                        this.votedFor === undefined ||
-                        this.votedFor === m.from
-                    )) {
+                    if (this.votedFor === undefined || this.votedFor === m.from) {
                         this.votedFor = m.from
                         this.touch()
                         this.send(m.from, 'vote')
-                    } else {
-                        this.send(m.from, 'abstain') // @todo: only reply if m.term is old?
                     }
                 }
                 break
             case 'vote':
                 {
                     if (this.state === State.Candidate) {
-                        if (m.term > this.term) {
-                            this.becomeFollower(m.term)
-                        } else {
-                            console.log(`[${this.id}] receives vote from ${m.from}, term ${this.term}`)
-                            this.votesReceived++
-                            if (this.votesReceived * 2 > this.service.clusterSize) {
-                                this.becomeLeader()
-                            }
-                        }
-                    }
-                }
-                break
-            case 'abstain':
-                {
-                    if (this.state === State.Candidate) {
-                        if (m.term > this.term) {
-                            this.becomeFollower(m.term)
+                        console.log(`[${this.id}] receives vote from ${m.from}, term ${this.term}`)
+                        this.votesReceived.add(m.from)
+                        if (this.votesReceived.size * 2 > this.service.clusterSize) {
+                            this.becomeLeader()
                         }
                     }
                 }
@@ -165,8 +143,8 @@ export default class Consensus {
         console.log(`[${this.id}] starts election, new term ${this.term}`)
         this.touch()
         this.updateTouchExpiration()
-        this.votedFor = this.id
-        this.votesReceived = 1
+        this.votesReceived.clear()
+        this.votesReceived.add(this.votedFor = this.id)
         this.broadcast('candidate')
     }
 }

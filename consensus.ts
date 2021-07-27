@@ -1,21 +1,22 @@
 import { Optional } from "./utils.ts"
 
-type NodeId = number
-interface Node {
-    id: NodeId
-    recv(d: any): void
+export type NodeId = string
+export type Message = {
+    from: NodeId
+    term: number
+    type: string
+    data: any
 }
 
-const nodes: Node[] = []
-function addNode() {
-    const node = new Consensus(nodes.length)
-    nodes.push(node)
-    return node
+export interface Service {
+    readonly clusterSize: number
+    send(to: NodeId, message: Message): void
+    broadcast(message: Message): void
 }
 
-enum State { Follower, Candidate, Leader, Dead }
+export enum State { Follower, Candidate, Leader, Dead }
 
-class Consensus implements Node {
+export default class Consensus {
     state = State.Follower
     term = 0
     votedFor: Optional<NodeId>
@@ -24,7 +25,7 @@ class Consensus implements Node {
     heartbeatInterval: Optional<number>
     touchExpiration: number = 0
 
-    constructor(public id: NodeId, public service = 'default') {
+    constructor(public id: NodeId, public service: Service) {
         this.start()
     }
 
@@ -49,21 +50,22 @@ class Consensus implements Node {
     }
 
     close() {
+        console.log(`[${this.id}] close`)
         this.stop()
         // @todo: dispose channels
     }
 
-    send(n: NodeId, d: any) {
-        const m = { service: this.service, term: this.term, from: this.id, data: d }
-        if (n !== this.id) setTimeout(() => nodes[n].recv(m), 0)
+    private message(type: string, data: any) {
+        return { from: this.id, term: this.term, type, data } as Message
     }
-    broadcast(d: any) { nodes.forEach(cn => this.send(cn.id, d)) }
 
-    recv(m: any) {
-        if (m.service !== this.service) return
+    send(to: NodeId, type: string, data?: any) { this.service.send(to, this.message(type, data)) }
+    broadcast(type: string, data?: any) { this.service.broadcast(this.message(type, data)) }
+
+    recv(m: Message) {
         if (this.state === State.Dead) return
 
-        switch (m.data[0]) {
+        switch (m.type) {
             case 'leader':
             case 'update': 
                 {
@@ -73,7 +75,7 @@ class Consensus implements Node {
                         this.touch()
                     }
             
-                    this.send(m.from, ['ack']) // @todo: only reply if m.term is old?
+                    this.send(m.from, 'ack') // @todo: only reply if m.term is old?
                 }
                 break
             case 'ack':
@@ -91,9 +93,9 @@ class Consensus implements Node {
                     )) {
                         this.votedFor = m.from
                         this.touch()
-                        this.send(m.from, ['vote'])
+                        this.send(m.from, 'vote')
                     } else {
-                        this.send(m.from, ['abstain']) // @todo: only reply if m.term is old?
+                        this.send(m.from, 'abstain') // @todo: only reply if m.term is old?
                     }
                 }
                 break
@@ -105,7 +107,7 @@ class Consensus implements Node {
                         } else {
                             console.log(`[${this.id}] receives vote from ${m.from}, term ${this.term}`)
                             this.votesReceived++
-                            if (this.votesReceived * 2 > nodes.length) {
+                            if (this.votesReceived * 2 > this.service.clusterSize) {
                                 this.becomeLeader()
                             }
                         }
@@ -114,7 +116,7 @@ class Consensus implements Node {
                 break
             case 'abstain':
                 {
-                    if (m.state === State.Candidate) {
+                    if (this.state === State.Candidate) {
                         if (m.term > this.term) {
                             this.becomeFollower(m.term)
                         }
@@ -131,7 +133,7 @@ class Consensus implements Node {
         const elapsed = performance.now() - this.lastTouch
         if (this.state === State.Leader) {
             if (elapsed >= 50) {
-                this.broadcast(['update'])
+                this.broadcast('update')
                 this.touch()
             }
             return
@@ -153,7 +155,7 @@ class Consensus implements Node {
     becomeLeader() {
         this.state = State.Leader
         console.log(`[${this.id}] becomes leader, term ${this.term}`)
-        this.broadcast(['leader'])
+        this.broadcast('leader')
         this.touch()
     }
 
@@ -165,12 +167,6 @@ class Consensus implements Node {
         this.updateTouchExpiration()
         this.votedFor = this.id
         this.votesReceived = 1
-        this.broadcast(['candidate'])
+        this.broadcast('candidate')
     }
-}
-
-if (import.meta.main) {
-    const n1 = addNode()
-    const n2 = addNode()
-    // const n3 = addNode()
 }

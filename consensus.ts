@@ -16,6 +16,9 @@ export interface Service {
 
 export enum State { Follower, Candidate, Leader, Dead }
 
+// Using the Raft consensus algorithm:
+// * leader election
+// * log replication (@todo)
 export default class Consensus {
     state = State.Follower
     term = 0
@@ -74,7 +77,7 @@ export default class Consensus {
 
         switch (m.type) {
             case 'leader':
-            case 'update': 
+            case 'update':
                 {
                     if (this.state !== State.Follower) this.becomeFollower(m.term)
                     else this.touch()

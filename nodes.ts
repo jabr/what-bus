@@ -64,6 +64,7 @@ export default class Nodes {
         return (node.channel ??= this.bus.channel(`i:${node.uuid}`))
     }
 
+    // distributed agreement on a node for a key using Rendezvous hashing
     rendezvousForKey(key: string, under: bigint = 1n << 64n): HashedNode {
         const reducer = (max: HashedNode, node: Node): HashedNode => {
             const hash = this.bus.hasher.reset()

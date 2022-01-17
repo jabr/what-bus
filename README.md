@@ -4,18 +4,29 @@ An event-bus based on the WHATWG's BroadcastChannel API.
 
 The `core` module is a basic framework for creating, caching and clean-up of the underlying channel instances.
 
-The `cluster` module is currently a conceptual work-in-progress, but the goal is coordination in a cluster of distributed WhatBus instances. Some planned/potential features:
+The `cluster` module is currently a work-in-progress, with the goal of coordination in a cluster of distributed WhatBus instances. Some implemented, partially complete, and planned features:
 
   * [Rendezvous hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing#Algorithm)
+  * [Raft consensus](https://en.wikipedia.org/wiki/Raft_(algorithm))
   * distributed Maps, Sets, executors
   * data replication & failover
-  * leader elections
-  * distributed queues, commits
+  * distributed queues, transactions
 
 ## Example
 
-```ts
-// @todo
+```js
+import WhatBus from "./core.ts"
+const wb = new WhatBus('wb:')
+
+let s1 = wb.subscribe('t:1', event => console.log('s1', event.data))
+wb.subscribeOnce('t:1', /* ... */)
+
+wb.publish('t:1', { m: 100 })
+wb.close()
+
+import { create } from "./cluster.ts"
+const wb = await create('twb:')
+// @todo: cluster examples
 ```
 
 ## References
